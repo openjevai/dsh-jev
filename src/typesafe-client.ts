@@ -23,6 +23,10 @@ import { join } from 'node:path'
 
 export const DEFAULT_BASE_URL = 'https://api.typesafe.ai/v1/systemone'
 export const DEFAULT_MODEL = 'jev-latest'
+/** OpenJEV community gateway — same Jev model, free public API (https://openjev.sh). */
+export const OPENJEV_BASE_URL = 'https://api.openjev.sh/v1/systemone'
+export const OPENJEV_MODEL = 'openjev'
+export type JevProvider = 'typesafe' | 'openjev'
 /** Interactive timeout. Measured warm latency is 250-300ms, cold start 700-750ms. */
 export const DEFAULT_TIMEOUT_MS = 2000
 /** Advisory post-execute timeout; the step must never wait on a stalled decision. */
@@ -70,6 +74,61 @@ function resolveApiKey(explicit?: string): string | undefined {
   return undefined
 }
 
+/** Resolve an OpenJEV API key from config, env, or ~/.dsh/.env (mirrors resolveApiKey). */
+function resolveOpenJevApiKey(explicit?: string): string | undefined {
+  if (explicit && typeof explicit === 'string' && !explicit.startsWith('__jsExpr')) {
+    return explicit
+  }
+  if (isTestEnvironment()) {
+    return undefined
+  }
+  if (typeof process !== 'undefined' && process.env?.OPENJEV_API_KEY) {
+    return process.env.OPENJEV_API_KEY
+  }
+  try {
+    const envFile = join(homedir(), '.dsh', '.env')
+    if (existsSync(envFile)) {
+      const match = readFileSync(envFile, 'utf8').match(/OPENJEV_API_KEY=([^\r\n]+)/)
+      if (match?.[1]) return match[1].trim()
+    }
+  } catch {}
+  return undefined
+}
+
+/**
+ * Pick the Jev provider and its endpoint/model/key.
+ *
+ * Selection order (TypeSafe stays the default; anyone with a TypeSafe key sees
+ * zero behaviour change):
+ * 1. Explicit choice — `config.provider` or `JEV_PROVIDER` env — wins outright.
+ * 2. Otherwise, if a TypeSafe key is available → TypeSafe (unchanged default).
+ * 3. Otherwise, if only an OpenJEV key is available → OpenJEV.
+ * Explicit `config.baseUrl` / `config.model` overrides still win in the constructor.
+ */
+function resolveProvider(config: TypeSafeClientConfig): {
+  provider: JevProvider
+  apiKey: string | undefined
+  baseUrl: string
+  model: string
+} {
+  const explicit = config.provider || (typeof process !== 'undefined' ? process.env?.JEV_PROVIDER : undefined)
+  if (explicit === 'openjev') {
+    return { provider: 'openjev', apiKey: resolveOpenJevApiKey(config.apiKey), baseUrl: OPENJEV_BASE_URL, model: OPENJEV_MODEL }
+  }
+  if (explicit === 'typesafe') {
+    return { provider: 'typesafe', apiKey: resolveApiKey(config.apiKey), baseUrl: DEFAULT_BASE_URL, model: DEFAULT_MODEL }
+  }
+  const typesafeKey = resolveApiKey(config.apiKey)
+  if (typesafeKey) {
+    return { provider: 'typesafe', apiKey: typesafeKey, baseUrl: DEFAULT_BASE_URL, model: DEFAULT_MODEL }
+  }
+  const openjevKey = resolveOpenJevApiKey(config.apiKey)
+  if (openjevKey) {
+    return { provider: 'openjev', apiKey: openjevKey, baseUrl: OPENJEV_BASE_URL, model: OPENJEV_MODEL }
+  }
+  return { provider: 'typesafe', apiKey: undefined, baseUrl: DEFAULT_BASE_URL, model: DEFAULT_MODEL }
+}
+
 /**
  * Question helper for boolean verification.
  */
@@ -102,6 +161,8 @@ export class TypeSafeClient {
   public readonly apiKey?: string
   public readonly baseUrl: string
   public readonly model: string
+  /** Which Jev provider this client resolves to ('typesafe' default or 'openjev'). */
+  public readonly provider: JevProvider
   public readonly timeoutMs: number
   public readonly pathTimeoutMs: number
   public readonly cacheTtlMs: number
@@ -109,9 +170,11 @@ export class TypeSafeClient {
   private readonly cache = new Map<string, { at: number; answers: Record<string, QuestionResult> }>()
 
   constructor(config: TypeSafeClientConfig = {}) {
-    this.apiKey = resolveApiKey(config.apiKey)
-    this.baseUrl = config.baseUrl || DEFAULT_BASE_URL
-    this.model = config.model || DEFAULT_MODEL
+    const resolved = resolveProvider(config)
+    this.provider = resolved.provider
+    this.apiKey = resolved.apiKey
+    this.baseUrl = config.baseUrl || resolved.baseUrl
+    this.model = config.model || resolved.model
     this.timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS
     this.pathTimeoutMs = config.pathTimeoutMs ?? DEFAULT_PATH_TIMEOUT_MS
     this.cacheTtlMs = config.cacheTtlMs ?? 30000
@@ -170,7 +233,7 @@ export class TypeSafeClient {
     // 3. Validate API key
     if (!this.apiKey) {
       throw new Error(
-        'TypeSafe API key missing. Provide apiKey in config or set TYPESAFE_API_KEY environment variable.'
+        'Jev API key missing. Provide apiKey in config, set TYPESAFE_API_KEY (TypeSafe, default) or OPENJEV_API_KEY (OpenJEV), or set JEV_PROVIDER=openjev to force the OpenJEV gateway.'
       )
     }
 

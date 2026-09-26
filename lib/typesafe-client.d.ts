@@ -5,6 +5,10 @@
 import type { ChoiceQuestion, CordisContext, NoulQuestion, QuestionResult, ScoreQuestion, SystemOneRequest, TypeSafeClientConfig } from './types.js';
 export declare const DEFAULT_BASE_URL = "https://api.typesafe.ai/v1/systemone";
 export declare const DEFAULT_MODEL = "jev-latest";
+/** OpenJEV community gateway — same Jev model, free public API (https://openjev.sh). */
+export declare const OPENJEV_BASE_URL = "https://api.openjev.sh/v1/systemone";
+export declare const OPENJEV_MODEL = "openjev";
+export declare type JevProvider = 'typesafe' | 'openjev';
 /** Interactive timeout. Measured warm latency is 250-300ms, cold start 700-750ms. */
 export declare const DEFAULT_TIMEOUT_MS = 2000;
 /** Advisory post-execute timeout; the step must never wait on a stalled decision. */
@@ -40,6 +44,8 @@ export declare class TypeSafeClient {
     readonly apiKey?: string;
     readonly baseUrl: string;
     readonly model: string;
+    /** Which Jev provider this client resolves to ('typesafe' default or 'openjev'). */
+    readonly provider: JevProvider;
     readonly timeoutMs: number;
     readonly pathTimeoutMs: number;
     readonly cacheTtlMs: number;

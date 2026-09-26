@@ -12,6 +12,8 @@
 
 The Cordis plugin suite that pairs [Jev](https://typesafe.ai) (TypeSafe's System One decision models) with [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (dsh).
 
+> **OpenJEV support:** Jev is built by [TypeSafe](https://typesafe.ai). This fork keeps TypeSafe as the default and adds optional support for [OpenJEV](https://openjev.sh), a free community gateway to the same Jev model — set `OPENJEV_API_KEY` (or `JEV_PROVIDER=openjev`) to use it. Original project: https://github.com/zhangxaochen/dsh-jev by @zhangxaochen.
+
 It adds the layer of semantic judgement dsh does not have: non-generative decision primitives (Noul, Choice, Score) at ~150 ms, used for **dynamic tool pruning** (fewer prompt tokens, lower time to first token), **semantic dead-loop blocking**, and a **guard for high-risk execution**. The verdicts come from System One rather than sampling, so they are fast and reproducible, and one decision costs about **$0.00013** — measured on 2026-09-20 over 2,254 decisions (12.4 KiB of input each, billed at $0.042 per million input tokens; output is free).
 
 ## Contents
@@ -76,6 +78,11 @@ Put the **API key** in `$DSH_HOME/.env` (default `~/.dsh/.env`; the desktop app 
 
 ```bash
 TYPESAFE_API_KEY=your_typesafe_api_key_here
+
+# Optional: use the free OpenJEV community gateway instead (https://openjev.sh)
+OPENJEV_API_KEY=your_openjev_api_key_here
+# Or force OpenJEV even when a TypeSafe key is also present:
+# JEV_PROVIDER=openjev
 ```
 
 Installed means usable — the defaults are calibrated, so **nothing has to be configured to run**:

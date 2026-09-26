@@ -83,6 +83,7 @@ registerJevTools(ctx, () => resolveClientFrom(ctx))
 - `apiKey?: string`: TypeSafe API Key（默认优先读取环境变量 `TYPESAFE_API_KEY`）。
 - `baseUrl?: string`: API 地址（默认 `https://api.typesafe.ai/v1/systemone`）。
 - `model?: string`: 决策模型（默认 `jev-latest`）。
+- `provider?: 'typesafe' | 'openjev'`: Jev 提供方。默认 `typesafe`（不变）；设为 `openjev`，或仅设置 `OPENJEV_API_KEY` 环境变量时，自动切换到 [OpenJEV](https://openjev.sh) 社区网关（端点 `https://api.openjev.sh/v1/systemone`、模型 `openjev`）。设置环境变量 `JEV_PROVIDER=openjev` 可在两把密钥同时存在时强制使用 OpenJEV。
 - `timeoutMs?: number`: 交互式请求超时，单位毫秒（默认 `2000`）。实测热调用 250–300ms、冷启动 700–750ms。
 - `pathTimeoutMs?: number`: 后置建议路径（死循环判定、安全语义裁决、结果整形）的超时，单位毫秒（默认 `800`）。
 - `cacheTtlMs?: number`: 相同载荷结果的缓存有效期，`0` 关闭（默认 `30000`）。

@@ -137,6 +137,8 @@ export interface TypeSafeClientConfig {
     apiKey?: string;
     baseUrl?: string;
     model?: string;
+    /** Jev provider: 'typesafe' (default) or 'openjev'. When unset, auto-detected from available API keys. */
+    provider?: 'typesafe' | 'openjev';
     /** Timeout for interactive requests (default: 2000ms; measured warm latency is 250-300ms). */
     timeoutMs?: number;
     /** Timeout for advisory post-execute requests (default: 800ms). */
